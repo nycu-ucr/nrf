@@ -11,6 +11,7 @@ package management
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -67,6 +68,8 @@ func HTTPGetNFInstance(c *gin.Context) {
 
 // RegisterNFInstance - Register a new NF Instance
 func HTTPRegisterNFInstance(c *gin.Context) {
+	println("Start HTTPRegisterNFInstance")
+	t1 := time.Now()
 	var nfprofile models.NfProfile
 
 	// step 1: retrieve http request body
@@ -119,6 +122,8 @@ func HTTPRegisterNFInstance(c *gin.Context) {
 	} else {
 		c.Data(httpResponse.Status, "application/json", responseBody)
 	}
+	t2 := time.Now()
+	logger.ManagementLog.Infof("\u001b[32;1mHTTPRegisterNFInstance Time\u001b[0m: %v (second)", t2.Sub(t1).Seconds())
 }
 
 // UpdateNFInstance - Update NF Instance profile
