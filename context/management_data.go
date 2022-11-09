@@ -11,10 +11,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/free5gc/MongoDBLibrary"
-	"github.com/free5gc/nrf/factory"
-	"github.com/free5gc/nrf/logger"
-	"github.com/free5gc/openapi"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/nrf/factory"
+	"github.com/nycu-ucr/nrf/logger"
+	"github.com/nycu-ucr/openapi"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 const NRF_NFINST_RES_URI_PREFIX = factory.NRF_NFM_RES_URI_PREFIX + "/nf-instances/"

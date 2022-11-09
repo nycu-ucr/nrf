@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/free5gc/nrf/factory"
-	"github.com/free5gc/nrf/logger"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/nrf/factory"
+	"github.com/nycu-ucr/nrf/logger"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 var (

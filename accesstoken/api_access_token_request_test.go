@@ -3,20 +3,21 @@ package accesstoken_test
 import (
 	"context"
 	"crypto/tls"
-	"net/http"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/nycu-ucr/gonet/http"
+
 	"github.com/antihax/optional"
 
 	"github.com/free5gc/MongoDBLibrary"
-	"github.com/free5gc/nrf/accesstoken"
-	"github.com/free5gc/nrf/factory"
-	"github.com/free5gc/nrf/logger"
-	"github.com/free5gc/nrf/util"
-	"github.com/free5gc/openapi/Nnrf_AccessToken"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/nrf/accesstoken"
+	"github.com/nycu-ucr/nrf/factory"
+	"github.com/nycu-ucr/nrf/logger"
+	"github.com/nycu-ucr/nrf/util"
+	"github.com/nycu-ucr/openapi/Nnrf_AccessToken"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 func TestAccessTokenRequest(t *testing.T) {

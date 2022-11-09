@@ -10,14 +10,15 @@
 package management
 
 import (
-	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/nycu-ucr/gonet/http"
 
-	"github.com/free5gc/logger_util"
-	"github.com/free5gc/nrf/factory"
-	"github.com/free5gc/nrf/logger"
+	"github.com/nycu-ucr/gin"
+
+	"github.com/nycu-ucr/logger_util"
+	"github.com/nycu-ucr/nrf/factory"
+	"github.com/nycu-ucr/nrf/logger"
 )
 
 // Route is the information for every URI.

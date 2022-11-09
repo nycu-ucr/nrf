@@ -1,13 +1,14 @@
 package producer
 
 import (
-	"net/http"
+	"github.com/nycu-ucr/gonet/http"
 
-	"github.com/dgrijalva/jwt-go"
+	// "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 
-	"github.com/free5gc/http_wrapper"
-	"github.com/free5gc/nrf/logger"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/http_wrapper"
+	"github.com/nycu-ucr/nrf/logger"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 func HandleAccessTokenRequest(request *http_wrapper.Request) *http_wrapper.Response {
