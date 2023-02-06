@@ -4,20 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/nycu-ucr/gonet/http"
 
 	"github.com/mitchellh/mapstructure"
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/free5gc/MongoDBLibrary"
-	"github.com/free5gc/TimeDecode"
-	"github.com/free5gc/http_wrapper"
-	nrf_context "github.com/free5gc/nrf/context"
-	"github.com/free5gc/nrf/logger"
-	"github.com/free5gc/openapi/Nnrf_NFManagement"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/TimeDecode"
+	"github.com/nycu-ucr/http_wrapper"
+	nrf_context "github.com/nycu-ucr/nrf/context"
+	"github.com/nycu-ucr/nrf/logger"
+	"github.com/nycu-ucr/openapi/Nnrf_NFManagement"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 func HandleNFDeregisterRequest(request *http_wrapper.Request) *http_wrapper.Response {

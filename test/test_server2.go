@@ -3,19 +3,20 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/nycu-ucr/gonet/http"
 
-	"github.com/free5gc/http2_util"
-	"github.com/free5gc/logger_util"
-	"github.com/free5gc/nrf/logger"
-	. "github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/gin"
+
 	"github.com/free5gc/path_util"
+	"github.com/nycu-ucr/http2_util"
+	"github.com/nycu-ucr/logger_util"
+	"github.com/nycu-ucr/nrf/logger"
+	. "github.com/nycu-ucr/openapi/models"
 )
 
 var (
-	NrfLogPath = path_util.Free5gcPath("github.com/free5gc/nrf/management/sslkeylog.log")
+	NrfLogPath = path_util.Free5gcPath("github.com/nycu-ucr/nrf/management/sslkeylog.log")
 	NrfPemPath = path_util.Free5gcPath("free5gc/support/TLS/nrf.pem")
 	NrfKeyPath = path_util.Free5gcPath("free5gc/support/TLS/nrf.key")
 )

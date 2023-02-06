@@ -12,9 +12,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	"github.com/free5gc/nrf/logger"
-	nrf_service "github.com/free5gc/nrf/service"
 	"github.com/free5gc/version"
+	"github.com/nycu-ucr/nrf/logger"
+	nrf_service "github.com/nycu-ucr/nrf/service"
 )
 
 var NRF = &nrf_service.NRF{}

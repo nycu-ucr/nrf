@@ -15,18 +15,18 @@ import (
 
 	"github.com/free5gc/MongoDBLibrary"
 	mongoDBLibLogger "github.com/free5gc/MongoDBLibrary/logger"
-	"github.com/free5gc/http2_util"
-	"github.com/free5gc/logger_util"
-	"github.com/free5gc/nrf/accesstoken"
-	nrf_context "github.com/free5gc/nrf/context"
-	"github.com/free5gc/nrf/discovery"
-	"github.com/free5gc/nrf/factory"
-	"github.com/free5gc/nrf/logger"
-	"github.com/free5gc/nrf/management"
-	"github.com/free5gc/nrf/util"
-	openApiLogger "github.com/free5gc/openapi/logger"
 	"github.com/free5gc/path_util"
 	pathUtilLogger "github.com/free5gc/path_util/logger"
+	"github.com/nycu-ucr/http2_util"
+	"github.com/nycu-ucr/logger_util"
+	"github.com/nycu-ucr/nrf/accesstoken"
+	nrf_context "github.com/nycu-ucr/nrf/context"
+	"github.com/nycu-ucr/nrf/discovery"
+	"github.com/nycu-ucr/nrf/factory"
+	"github.com/nycu-ucr/nrf/logger"
+	"github.com/nycu-ucr/nrf/management"
+	"github.com/nycu-ucr/nrf/util"
+	openApiLogger "github.com/nycu-ucr/openapi/logger"
 )
 
 type NRF struct{}

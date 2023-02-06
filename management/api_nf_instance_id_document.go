@@ -10,15 +10,17 @@
 package management
 
 import (
-	"net/http"
+	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/nycu-ucr/gonet/http"
 
-	"github.com/free5gc/http_wrapper"
-	"github.com/free5gc/nrf/logger"
-	"github.com/free5gc/nrf/producer"
-	"github.com/free5gc/openapi"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/gin"
+
+	"github.com/nycu-ucr/http_wrapper"
+	"github.com/nycu-ucr/nrf/logger"
+	"github.com/nycu-ucr/nrf/producer"
+	"github.com/nycu-ucr/openapi"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 // DeregisterNFInstance - Deregisters a given NF Instance
@@ -67,6 +69,8 @@ func HTTPGetNFInstance(c *gin.Context) {
 
 // RegisterNFInstance - Register a new NF Instance
 func HTTPRegisterNFInstance(c *gin.Context) {
+	println("Start HTTPRegisterNFInstance")
+	t1 := time.Now()
 	var nfprofile models.NfProfile
 
 	// step 1: retrieve http request body
@@ -119,6 +123,8 @@ func HTTPRegisterNFInstance(c *gin.Context) {
 	} else {
 		c.Data(httpResponse.Status, "application/json", responseBody)
 	}
+	t2 := time.Now()
+	logger.ManagementLog.Infof("\u001b[32;1mHTTPRegisterNFInstance Time\u001b[0m: %v (second)", t2.Sub(t1).Seconds())
 }
 
 // UpdateNFInstance - Update NF Instance profile
@@ -156,3 +162,26 @@ func HTTPUpdateNFInstance(c *gin.Context) {
 		c.Data(httpResponse.Status, "application/json", responseBody)
 	}
 }
+
+func HandlerFunction(c *gin.Context) {
+	var nfprofile models.NfProfile
+
+	// step 1: retrieve http request body
+	requestBody, _ := c.GetRawData()
+
+	// step 2: convert requestBody to openapi models
+	openapi.Deserialize(&nfprofile, requestBody, "application/json")
+
+	// step 3: encapsulate the request by http_wrapper package
+	req := http_wrapper.NewRequest(c.Request, nfprofile)
+
+	// step 4: call producer
+	httpResponse := producer.HandleNFRegisterRequest(req)
+
+	// step 5: send response
+	responseBody, _ := openapi.Serialize(httpResponse.Body, "application/json")
+	c.Data(httpResponse.Status, "application/json", responseBody)
+}
+
+
+

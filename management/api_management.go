@@ -10,9 +10,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/free5gc/MongoDBLibrary"
-	"github.com/free5gc/TimeDecode"
-	"github.com/free5gc/nrf/logger"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/TimeDecode"
+	"github.com/nycu-ucr/nrf/logger"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 func getLocalIp() string {
