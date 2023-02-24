@@ -10,12 +10,8 @@
 package management
 
 import (
-	"time"
-
-	"github.com/nycu-ucr/gonet/http"
-
 	"github.com/nycu-ucr/gin"
-
+	"github.com/nycu-ucr/gonet/http"
 	"github.com/nycu-ucr/http_wrapper"
 	"github.com/nycu-ucr/nrf/logger"
 	"github.com/nycu-ucr/nrf/producer"
@@ -69,8 +65,8 @@ func HTTPGetNFInstance(c *gin.Context) {
 
 // RegisterNFInstance - Register a new NF Instance
 func HTTPRegisterNFInstance(c *gin.Context) {
-	println("Start HTTPRegisterNFInstance")
-	t1 := time.Now()
+	// println("Start HTTPRegisterNFInstance")
+	// t1 := time.Now()
 	var nfprofile models.NfProfile
 
 	// step 1: retrieve http request body
@@ -123,8 +119,9 @@ func HTTPRegisterNFInstance(c *gin.Context) {
 	} else {
 		c.Data(httpResponse.Status, "application/json", responseBody)
 	}
-	t2 := time.Now()
-	logger.ManagementLog.Infof("\u001b[32;1mHTTPRegisterNFInstance Time\u001b[0m: %v (second)", t2.Sub(t1).Seconds())
+	// t2 := time.Now()
+	// logger.ManagementLog.Infof("\u001b[32;1mHTTPRegisterNFInstance Time\u001b[0m: %v (second)", t2.Sub(t1).Seconds())
+	// println("End HTTPRegisterNFInstance")
 }
 
 // UpdateNFInstance - Update NF Instance profile
