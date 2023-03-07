@@ -14,11 +14,11 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nycu-ucr/TimeDecode v0.0.0-20221109033919-04602a6e042b
 	github.com/nycu-ucr/gin v0.0.0-20230224065233-0182b69a4e14
-	github.com/nycu-ucr/gonet v0.0.0-20230224064046-12c0ad6b3211
-	github.com/nycu-ucr/http2_util v0.0.0-20230224065147-ff0ba4feb4b0
+	github.com/nycu-ucr/gonet v0.0.0-20230307120806-af99a970179a
+	github.com/nycu-ucr/http2_util v0.0.0-20230307121002-14e0455be81e
 	github.com/nycu-ucr/http_wrapper v0.0.0-20221108133141-f494ef72e89f
 	github.com/nycu-ucr/logger_util v0.0.0-20221108143044-7079981b07b7
-	github.com/nycu-ucr/openapi v0.0.0-20230224065032-21971add2584
+	github.com/nycu-ucr/openapi v0.0.0-20230307121121-a96149972cfe
 	github.com/sirupsen/logrus v1.9.0
 	github.com/urfave/cli v1.22.12
 	go.mongodb.org/mongo-driver v1.11.1
@@ -48,7 +48,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
-	github.com/nycu-ucr/net v0.0.0-20230224063949-d0c9417d961d // indirect
+	github.com/nycu-ucr/net v0.0.0-20230307120859-5f5d7afdaf03 // indirect
 	github.com/nycu-ucr/onvmpoller v0.0.0-20230222141454-8145d720d05c // indirect
 	github.com/nycu-ucr/sse v0.0.0-20221108140034-8e09fddc7347 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
