@@ -11,15 +11,15 @@ package accesstoken
 
 import (
 	"encoding/json"
-	"net/http"
+	"github.com/nycu-ucr/gonet/http"
 	"reflect"
 
-	"github.com/gin-gonic/gin"
+	"github.com/nycu-ucr/gin"
 
 	"github.com/free5gc/nrf/internal/logger"
 	"github.com/free5gc/nrf/internal/sbi/producer"
-	"github.com/free5gc/openapi/models"
-	"github.com/free5gc/util/httpwrapper"
+	"github.com/nycu-ucr/openapi/models"
+	"github.com/nycu-ucr/util/httpwrapper"
 )
 
 // AccessTokenRequest - Access Token Request

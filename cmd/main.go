@@ -9,8 +9,8 @@ import (
 	"github.com/free5gc/nrf/internal/logger"
 	"github.com/free5gc/nrf/pkg/factory"
 	"github.com/free5gc/nrf/pkg/service"
-	logger_util "github.com/free5gc/util/logger"
-	"github.com/free5gc/util/version"
+	logger_util "github.com/nycu-ucr/util/logger"
+	"github.com/nycu-ucr/util/version"
 )
 
 var NRF *service.NrfApp

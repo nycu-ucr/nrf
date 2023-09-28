@@ -3,7 +3,7 @@ package producer
 import (
 	"encoding/json"
 	"math/big"
-	"net/http"
+	"github.com/nycu-ucr/gonet/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -12,10 +12,10 @@ import (
 
 	"github.com/free5gc/nrf/internal/context"
 	"github.com/free5gc/nrf/internal/logger"
-	"github.com/free5gc/openapi/models"
-	"github.com/free5gc/util/httpwrapper"
-	timedecode "github.com/free5gc/util/mapstruct"
-	"github.com/free5gc/util/mongoapi"
+	"github.com/nycu-ucr/openapi/models"
+	"github.com/nycu-ucr/util/httpwrapper"
+	timedecode "github.com/nycu-ucr/util/mapstruct"
+	"github.com/nycu-ucr/util/mongoapi"
 )
 
 func HandleNFDiscoveryRequest(request *httpwrapper.Request) *httpwrapper.Response {

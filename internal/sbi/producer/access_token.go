@@ -2,7 +2,7 @@ package producer
 
 import (
 	"crypto/x509"
-	"net/http"
+	"github.com/nycu-ucr/gonet/http"
 	"strings"
 	"time"
 
@@ -13,10 +13,10 @@ import (
 	nrf_context "github.com/free5gc/nrf/internal/context"
 	"github.com/free5gc/nrf/internal/logger"
 	"github.com/free5gc/nrf/pkg/factory"
-	"github.com/free5gc/openapi"
-	"github.com/free5gc/openapi/models"
-	"github.com/free5gc/util/httpwrapper"
-	"github.com/free5gc/util/mongoapi"
+	"github.com/nycu-ucr/openapi"
+	"github.com/nycu-ucr/openapi/models"
+	"github.com/nycu-ucr/util/httpwrapper"
+	"github.com/nycu-ucr/util/mongoapi"
 )
 
 func HandleAccessTokenRequest(request *httpwrapper.Request) *httpwrapper.Response {
