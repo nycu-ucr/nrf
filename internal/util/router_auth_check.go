@@ -1,13 +1,13 @@
 package util
 
 import (
-	"net/http"
+	"github.com/nycu-ucr/gonet/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/nycu-ucr/gin"
 
-	nrf_context "github.com/free5gc/nrf/internal/context"
-	"github.com/free5gc/nrf/internal/logger"
-	"github.com/free5gc/openapi/models"
+	nrf_context "github.com/nycu-ucr/nrf/internal/context"
+	"github.com/nycu-ucr/nrf/internal/logger"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 type (

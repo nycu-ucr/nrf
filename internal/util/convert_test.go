@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/free5gc/nrf/internal/util"
+	"github.com/nycu-ucr/nrf/internal/util"
 )
 
 func TestSnssaisToBsonM(t *testing.T) {

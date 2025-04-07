@@ -10,11 +10,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/free5gc/nrf/internal/logger"
-	"github.com/free5gc/nrf/pkg/factory"
-	"github.com/free5gc/openapi"
-	"github.com/free5gc/openapi/models"
-	"github.com/free5gc/util/mongoapi"
+	"github.com/nycu-ucr/nrf/internal/logger"
+	"github.com/nycu-ucr/nrf/pkg/factory"
+	"github.com/nycu-ucr/openapi"
+	"github.com/nycu-ucr/openapi/models"
+	"github.com/nycu-ucr/util/mongoapi"
 )
 
 const NRF_NFINST_RES_URI_PREFIX = factory.NrfNfmResUriPrefix + "/nf-instances/"

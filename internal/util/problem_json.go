@@ -1,9 +1,9 @@
 package util
 
 import (
-	"github.com/gin-gonic/gin"
+	"github.com/nycu-ucr/gin"
 
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 func GinProblemJson(c *gin.Context, problemDetails *models.ProblemDetails) {

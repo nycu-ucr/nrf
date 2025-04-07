@@ -11,7 +11,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"gopkg.in/yaml.v2"
 
-	"github.com/free5gc/nrf/internal/logger"
+	"github.com/nycu-ucr/nrf/internal/logger"
 )
 
 var NrfConfig *Config

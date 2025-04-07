@@ -11,15 +11,15 @@ package sbi
 
 import (
 	"encoding/json"
-	"net/http"
+	"github.com/nycu-ucr/gonet/http"
 	"reflect"
 
-	"github.com/gin-gonic/gin"
+	"github.com/nycu-ucr/gin"
 
-	"github.com/free5gc/nrf/internal/logger"
-	"github.com/free5gc/nrf/internal/util"
-	"github.com/free5gc/nrf/pkg/factory"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/nrf/internal/logger"
+	"github.com/nycu-ucr/nrf/internal/util"
+	"github.com/nycu-ucr/nrf/pkg/factory"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 func (s *Server) getAccesstokenRoutes() []Route {

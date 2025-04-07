@@ -3,12 +3,12 @@ package consumer
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"github.com/nycu-ucr/gonet/http"
 	"sync"
 
-	"github.com/free5gc/nrf/internal/logger"
-	"github.com/free5gc/openapi/models"
-	"github.com/free5gc/openapi/nrf/NFManagement"
+	"github.com/nycu-ucr/nrf/internal/logger"
+	"github.com/nycu-ucr/openapi/models"
+	"github.com/nycu-ucr/openapi/nrf/NFManagement"
 )
 
 type nnrfService struct {

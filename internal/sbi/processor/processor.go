@@ -1,8 +1,8 @@
 package processor
 
 import (
-	"github.com/free5gc/nrf/internal/sbi/consumer"
-	"github.com/free5gc/nrf/pkg/app"
+	"github.com/nycu-ucr/nrf/internal/sbi/consumer"
+	"github.com/nycu-ucr/nrf/pkg/app"
 )
 
 type ProcessorNrf interface {

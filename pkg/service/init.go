@@ -10,14 +10,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	nrf_context "github.com/free5gc/nrf/internal/context"
-	"github.com/free5gc/nrf/internal/logger"
-	"github.com/free5gc/nrf/internal/sbi"
-	"github.com/free5gc/nrf/internal/sbi/consumer"
-	"github.com/free5gc/nrf/internal/sbi/processor"
-	"github.com/free5gc/nrf/pkg/app"
-	"github.com/free5gc/nrf/pkg/factory"
-	"github.com/free5gc/util/mongoapi"
+	nrf_context "github.com/nycu-ucr/nrf/internal/context"
+	"github.com/nycu-ucr/nrf/internal/logger"
+	"github.com/nycu-ucr/nrf/internal/sbi"
+	"github.com/nycu-ucr/nrf/internal/sbi/consumer"
+	"github.com/nycu-ucr/nrf/internal/sbi/processor"
+	"github.com/nycu-ucr/nrf/pkg/app"
+	"github.com/nycu-ucr/nrf/pkg/factory"
+	"github.com/nycu-ucr/util/mongoapi"
 )
 
 var NRF *NrfApp

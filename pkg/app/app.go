@@ -1,8 +1,8 @@
 package app
 
 import (
-	nrf_context "github.com/free5gc/nrf/internal/context"
-	"github.com/free5gc/nrf/pkg/factory"
+	nrf_context "github.com/nycu-ucr/nrf/internal/context"
+	"github.com/nycu-ucr/nrf/pkg/factory"
 )
 
 type App interface {

@@ -14,8 +14,8 @@ import (
 
 	"github.com/asaskevich/govalidator"
 
-	"github.com/free5gc/nrf/internal/logger"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/nrf/internal/logger"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 const (

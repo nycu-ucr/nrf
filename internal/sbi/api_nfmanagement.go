@@ -11,18 +11,18 @@ package sbi
 
 import (
 	"fmt"
-	"net/http"
+	"github.com/nycu-ucr/gonet/http"
 	"reflect"
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/nycu-ucr/gin"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/free5gc/nrf/internal/logger"
-	"github.com/free5gc/nrf/internal/util"
-	"github.com/free5gc/openapi"
-	"github.com/free5gc/openapi/models"
+	"github.com/nycu-ucr/nrf/internal/logger"
+	"github.com/nycu-ucr/nrf/internal/util"
+	"github.com/nycu-ucr/openapi"
+	"github.com/nycu-ucr/openapi/models"
 )
 
 func (s *Server) getNfRegisterRoute() []Route {
