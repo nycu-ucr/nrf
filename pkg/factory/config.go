@@ -15,7 +15,7 @@ import (
 	"github.com/asaskevich/govalidator"
 
 	"github.com/free5gc/nrf/internal/logger"
-	"github.com/nycu-ucr/openapi/models"
+	"github.com/free5gc/openapi/models"
 )
 
 const (
@@ -30,6 +30,7 @@ const (
 	NrfSbiDefaultScheme          = "https"
 	NrfNfmResUriPrefix           = "/nnrf-nfm/v1"
 	NrfDiscResUriPrefix          = "/nnrf-disc/v1"
+	NrfBootstrappingPrefix       = "/bootstrapping"
 )
 
 type Config struct {

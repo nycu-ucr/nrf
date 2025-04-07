@@ -1,41 +1,30 @@
-package producer
+package processor
 
 import (
 	"encoding/json"
+	"log"
 	"math/big"
-	"github.com/nycu-ucr/gonet/http"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/free5gc/nrf/internal/context"
+	nrf_context "github.com/free5gc/nrf/internal/context"
 	"github.com/free5gc/nrf/internal/logger"
-	"github.com/nycu-ucr/openapi/models"
-	"github.com/nycu-ucr/util/httpwrapper"
-	timedecode "github.com/nycu-ucr/util/mapstruct"
-	"github.com/nycu-ucr/util/mongoapi"
+	"github.com/free5gc/nrf/internal/util"
+	"github.com/free5gc/openapi/models"
+	timedecode "github.com/free5gc/util/mapstruct"
+	"github.com/free5gc/util/mongoapi"
 )
 
-func HandleNFDiscoveryRequest(request *httpwrapper.Request) *httpwrapper.Response {
+func (p *Processor) HandleNFDiscoveryRequest(c *gin.Context, queryParameters url.Values) {
 	// Get all query parameters
 	logger.DiscLog.Infoln("Handle NFDiscoveryRequest")
 
-	response, problemDetails := NFDiscoveryProcedure(request.Query)
-	// Send Response
-	// step 4: process the return value from step 3
-	if response != nil {
-		// status code is based on SPEC, and option headers
-		return httpwrapper.NewResponse(http.StatusOK, nil, response)
-	} else if problemDetails != nil {
-		return httpwrapper.NewResponse(int(problemDetails.Status), nil, problemDetails)
-	}
-	problemDetails = &models.ProblemDetails{
-		Status: http.StatusForbidden,
-		Cause:  "UNSPECIFIED",
-	}
-	return httpwrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
+	p.NFDiscoveryProcedure(c, queryParameters)
 }
 
 func validateQueryParameters(queryParameters url.Values) bool {
@@ -83,16 +72,15 @@ func validateQueryParameters(queryParameters url.Values) bool {
 	return true
 }
 
-func NFDiscoveryProcedure(
-	queryParameters url.Values,
-) (response *models.SearchResult, problemDetails *models.ProblemDetails) {
+func (p *Processor) NFDiscoveryProcedure(c *gin.Context, queryParameters url.Values) {
 	if !validateQueryParameters(queryParameters) {
 		problemDetails := &models.ProblemDetails{
 			Title:  "Invalid Parameter",
 			Status: http.StatusBadRequest,
 			Cause:  "Loss mandatory parameter",
 		}
-		return nil, problemDetails
+		util.GinProblemJson(c, problemDetails)
+		return
 	}
 
 	if queryParameters["complexQuery"] != nil {
@@ -105,7 +93,7 @@ func NFDiscoveryProcedure(
 			logger.DiscLog.Warnln("UnMasrhal complexQuery Error: ", err)
 		}
 		// Check either CNF or DNF
-		if complexQueryStruct.CNf != nil && complexQueryStruct.DNf != nil {
+		if complexQueryStruct.CnfUnits != nil && complexQueryStruct.DnfUnits != nil {
 			problemDetails := &models.ProblemDetails{
 				Title:  "Invalid Parameter",
 				Status: http.StatusBadRequest,
@@ -114,7 +102,8 @@ func NFDiscoveryProcedure(
 					{Param: "complexQuery"},
 				},
 			}
-			return nil, problemDetails
+			util.GinProblemJson(c, problemDetails)
+			return
 		}
 	}
 
@@ -125,7 +114,7 @@ func NFDiscoveryProcedure(
 	logger.DiscLog.Traceln("Query filter: ", filter)
 
 	// Use the filter to find documents
-	nfProfilesRaw, err := mongoapi.RestfulAPIGetMany("NfProfile", filter)
+	nfProfilesRaw, err := mongoapi.RestfulAPIGetMany(nrf_context.NfProfileCollName, filter)
 	if err != nil {
 		logger.DiscLog.Errorf("NFDiscoveryProcedure err: %+v", err)
 		problemDetails := &models.ProblemDetails{
@@ -134,12 +123,13 @@ func NFDiscoveryProcedure(
 			Detail: err.Error(),
 			Cause:  "SYSTEM_FAILURE",
 		}
-		return nil, problemDetails
+		util.GinProblemJson(c, problemDetails)
+		return
 	}
 
 	// nfProfile data for response
-	var nfProfilesStruct []models.NfProfile
-	if err := timedecode.Decode(nfProfilesRaw, &nfProfilesStruct); err != nil {
+	var nfProfilesStruct []models.NrfNfDiscoveryNfProfile
+	if err = timedecode.Decode(nfProfilesRaw, &nfProfilesStruct); err != nil {
 		logger.DiscLog.Errorf("NF Profile Raw decode error: %+v", err)
 		problemDetails := &models.ProblemDetails{
 			Title:  "System failure",
@@ -147,46 +137,49 @@ func NFDiscoveryProcedure(
 			Detail: err.Error(),
 			Cause:  "SYSTEM_FAILURE",
 		}
-		return nil, problemDetails
+		util.GinProblemJson(c, problemDetails)
+		return
 	}
 
 	// handle ipv4 & ipv6
 	if queryParameters["target-nf-type"][0] == "BSF" {
-		for i, nfProfile := range nfProfilesStruct {
+		for i := range nfProfilesStruct {
+			nfProfile := &nfProfilesStruct[i]
 			if nfProfile.BsfInfo != nil && nfProfile.BsfInfo.Ipv4AddressRanges != nil {
-				for j := range *nfProfile.BsfInfo.Ipv4AddressRanges {
-					ipv4IntStart, err := strconv.Atoi((((*(*nfProfilesStruct[i].BsfInfo).Ipv4AddressRanges)[j]).Start))
-					if err != nil {
-						logger.DiscLog.Warnln("ipv4IntStart Atoi Error: ", err)
+				for addressRange := range nfProfile.BsfInfo.Ipv4AddressRanges {
+					ipv4IntStart, errAtoi := strconv.Atoi(nfProfile.BsfInfo.Ipv4AddressRanges[addressRange].Start)
+					if errAtoi != nil {
+						logger.DiscLog.Warnln("ipv4IntStart Atoi Error: ", errAtoi)
 					}
-					((*(*nfProfilesStruct[i].BsfInfo).Ipv4AddressRanges)[j]).Start = context.Ipv4IntToIpv4String(int64(ipv4IntStart))
-					ipv4IntEnd, err := strconv.Atoi((((*(*nfProfilesStruct[i].BsfInfo).Ipv4AddressRanges)[j]).End))
-					if err != nil {
-						logger.DiscLog.Warnln("ipv4IntEnd Atoi Error: ", err)
+					(nfProfile.BsfInfo.Ipv4AddressRanges)[addressRange].Start = nrf_context.Ipv4IntToIpv4String(int64(ipv4IntStart))
+					ipv4IntEnd, errAtoi := strconv.Atoi(nfProfile.BsfInfo.Ipv4AddressRanges[addressRange].End)
+					if errAtoi != nil {
+						logger.DiscLog.Warnln("ipv4IntEnd Atoi Error: ", errAtoi)
 					}
-					((*(*nfProfilesStruct[i].BsfInfo).Ipv4AddressRanges)[j]).End = context.Ipv4IntToIpv4String(int64(ipv4IntEnd))
+					nfProfile.BsfInfo.Ipv4AddressRanges[addressRange].End = nrf_context.Ipv4IntToIpv4String(int64(ipv4IntEnd))
 				}
 			}
+
 			if nfProfile.BsfInfo != nil && nfProfile.BsfInfo.Ipv6PrefixRanges != nil {
-				for j := range *nfProfile.BsfInfo.Ipv6PrefixRanges {
+				for prefixRange := range nfProfile.BsfInfo.Ipv6PrefixRanges {
 					ipv6IntStart := new(big.Int)
-					ipv6IntStart.SetString(((*(*nfProfilesStruct[i].BsfInfo).Ipv6PrefixRanges)[j]).Start, 10)
-					((*(*nfProfilesStruct[i].BsfInfo).Ipv6PrefixRanges)[j]).Start = context.Ipv6IntToIpv6String(ipv6IntStart)
+					ipv6IntStart.SetString(nfProfile.BsfInfo.Ipv6PrefixRanges[prefixRange].Start, 10)
+					nfProfile.BsfInfo.Ipv6PrefixRanges[prefixRange].Start = nrf_context.Ipv6IntToIpv6String(ipv6IntStart)
 
 					ipv6IntEnd := new(big.Int)
-					ipv6IntEnd.SetString(((*(*nfProfilesStruct[i].BsfInfo).Ipv6PrefixRanges)[j]).End, 10)
-					((*(*nfProfilesStruct[i].BsfInfo).Ipv6PrefixRanges)[j]).End = context.Ipv6IntToIpv6String(ipv6IntEnd)
+					ipv6IntEnd.SetString(nfProfile.BsfInfo.Ipv6PrefixRanges[prefixRange].End, 10)
+					nfProfile.BsfInfo.Ipv6PrefixRanges[prefixRange].End = nrf_context.Ipv6IntToIpv6String(ipv6IntEnd)
 				}
 			}
 		}
 	}
+	validityPeriod := 100
 	// Build SearchResult model
 	searchResult := &models.SearchResult{
-		ValidityPeriod: 100,
+		ValidityPeriod: int32(validityPeriod),
 		NfInstances:    nfProfilesStruct,
 	}
-
-	return searchResult, nil
+	c.JSON(http.StatusOK, searchResult)
 }
 
 func buildFilter(queryParameters url.Values) bson.M {
@@ -275,6 +268,7 @@ func buildFilter(queryParameters url.Values) bson.M {
 	// Mnc: Pattern: '^[0-9]{2,3}$'
 	if queryParameters["target-plmn-list"] != nil {
 		targetPlmnList := queryParameters["target-plmn-list"][0]
+		targetPlmnList = strings.Trim(targetPlmnList, "[]") // append trim
 		targetPlmnListSplit := strings.Split(targetPlmnList, ",")
 		var targetPlmnListBsonArray bson.A
 
@@ -346,36 +340,12 @@ func buildFilter(queryParameters url.Values) bson.M {
 	// Pattern: '^[A-Fa-f0-9]{6}$'
 	if queryParameters["snssais"] != nil {
 		snssais := queryParameters["snssais"][0]
-		snssaisSplit := strings.Split(snssais, ",")
+		// snssais = [{"sst":1,"sd":"fedcba"}]
+
 		var snssaisBsonArray bson.A
-
-		var tempSnssai string
-		for i, v := range snssaisSplit {
-			if i%2 == 0 {
-				tempSnssai = v
-			} else {
-				tempSnssai += ","
-				tempSnssai += v
-
-				snssaiStruct := &models.Snssai{}
-				err := json.Unmarshal([]byte(tempSnssai), snssaiStruct)
-				if err != nil {
-					logger.DiscLog.Warnln("Unmarshal Error in snssaiStruct", err)
-				}
-
-				snssaiByteArray, err := bson.Marshal(snssaiStruct)
-				if err != nil {
-					logger.DiscLog.Warnln("Unmarshal Error in snssaiStruct", err)
-				}
-
-				snssaiBsonM := bson.M{}
-				err = bson.Unmarshal(snssaiByteArray, &snssaiBsonM)
-				if err != nil {
-					logger.DiscLog.Warnln("Unmarshal Error in snssaiBsonM", err)
-				}
-
-				snssaisBsonArray = append(snssaisBsonArray, bson.M{"sNssais": bson.M{"$elemMatch": snssaiBsonM}})
-			}
+		slices := util.SnssaisToBsonM(snssais[1 : len(snssais)-1])
+		for _, slice := range slices {
+			snssaisBsonArray = append(snssaisBsonArray, bson.M{"sNssais": bson.M{"$elemMatch": slice}})
 		}
 
 		// if not assign, serve all NF
@@ -581,7 +551,8 @@ func buildFilter(queryParameters url.Values) bson.M {
 		var supiFilter bson.M
 		supi = queryParameters["supi"][0]
 		supi = supi[5:]
-		if targetNfType == "PCF" {
+		switch targetNfType {
+		case "PCF":
 			supiFilter = bson.M{
 				"$or": []bson.M{
 					{
@@ -603,7 +574,7 @@ func buildFilter(queryParameters url.Values) bson.M {
 					},
 				},
 			}
-		} else if targetNfType == "CHF" {
+		case "CHF":
 			supiFilter = bson.M{
 				"$or": []bson.M{
 					{
@@ -625,7 +596,7 @@ func buildFilter(queryParameters url.Values) bson.M {
 					},
 				},
 			}
-		} else if targetNfType == "AUSF" {
+		case "AUSF":
 			supiFilter = bson.M{
 				"$or": []bson.M{
 					{
@@ -647,7 +618,7 @@ func buildFilter(queryParameters url.Values) bson.M {
 					},
 				},
 			}
-		} else if targetNfType == "UDM" {
+		case "UDM":
 			supiFilter = bson.M{
 				"$or": []bson.M{
 					{
@@ -677,7 +648,7 @@ func buildFilter(queryParameters url.Values) bson.M {
 					},
 				},
 			}
-		} else if targetNfType == "UDR" {
+		case "UDR":
 			supiFilter = bson.M{
 				"$or": []bson.M{
 					{
@@ -716,7 +687,7 @@ func buildFilter(queryParameters url.Values) bson.M {
 		var ueIpv4AddressFilter bson.M
 		if targetNfType == "BSF" {
 			ueIpv4Address := queryParameters["ue-ipv4-address"][0]
-			ueIpv4AddressNumber := context.Ipv4ToInt(ueIpv4Address)
+			ueIpv4AddressNumber := nrf_context.Ipv4ToInt(ueIpv4Address)
 			ueIpv4AddressFilter = bson.M{
 				"$or": []bson.M{
 					{
@@ -768,7 +739,7 @@ func buildFilter(queryParameters url.Values) bson.M {
 		var ueIpv6PrefixFilter bson.M
 		if targetNfType == "BSF" {
 			ueIpv6Prefix := queryParameters["ue-ipv6-prefix"][0]
-			ueIpv6PrefixNumber := context.Ipv6ToInt(ueIpv6Prefix)
+			ueIpv6PrefixNumber := nrf_context.Ipv6ToInt(ueIpv6Prefix)
 			ueIpv6PrefixFilter = bson.M{
 				"$or": []bson.M{
 					{
@@ -912,7 +883,7 @@ func buildFilter(queryParameters url.Values) bson.M {
 		var externalGroupIdentityFilter bson.M
 		externalGroupIdentity := queryParameters["external-group-identity"][0]
 
-		encodedGroupId := context.EncodeGroupId(externalGroupIdentity)
+		encodedGroupId := nrf_context.EncodeGroupId(externalGroupIdentity)
 
 		if targetNfType == "UDM" {
 			externalGroupIdentityFilter = bson.M{
@@ -1213,7 +1184,7 @@ type AtomElem struct {
 
 func complexQueryFilter(complexQueryParameter *models.ComplexQuery) bson.M {
 	complexQueryType := ""
-	if complexQueryParameter.CNf != nil {
+	if complexQueryParameter.CnfUnits != nil {
 		complexQueryType = COMPLEX_QUERY_TYPE_CNF
 	} else {
 		complexQueryType = COMPLEX_QUERY_TYPE_DNF
@@ -1226,11 +1197,16 @@ func complexQueryFilter(complexQueryParameter *models.ComplexQuery) bson.M {
 		filter = bson.M{
 			"$and": []bson.M{},
 		}
-		for _, cnfUnit := range complexQueryParameter.CNf.CnfUnits {
+		for _, cnfUnit := range complexQueryParameter.CnfUnits {
 			var queryParameters map[string]*AtomElem = make(map[string]*AtomElem)
 			var cnfUnitFilter bson.M
 			for _, atom := range cnfUnit.CnfUnit {
-				queryParameters[atom.Attr] = &AtomElem{value: atom.Value, negative: atom.Negative}
+				valueJson, err := json.Marshal(atom.Value)
+				if err != nil {
+					log.Fatalf("Failed: %v", err)
+				}
+				value := string(valueJson)
+				queryParameters[atom.Attr] = &AtomElem{value: value, negative: atom.Negative}
 			}
 			cnfUnitFilter = complexQueryFilterSubprocess(queryParameters, complexQueryType)
 
@@ -1359,6 +1335,7 @@ func complexQueryFilterSubprocess(queryParameters map[string]*AtomElem, complexQ
 	// Mnc: Pattern: '^[0-9]{2,3}$'
 	if queryParameters["target-plmn-list"] != nil {
 		targetPlmnList := queryParameters["target-plmn-list"].value
+		targetPlmnList = strings.Trim(targetPlmnList, "[]") // append trim
 		targetPlmnListSplit := strings.Split(targetPlmnList, ",")
 		var targetPlmnListBsonArray bson.A
 
@@ -1456,36 +1433,11 @@ func complexQueryFilterSubprocess(queryParameters map[string]*AtomElem, complexQ
 	// Pattern: '^[A-Fa-f0-9]{6}$'
 	if queryParameters["snssais"] != nil {
 		snssais := queryParameters["snssais"].value
-		snssaisSplit := strings.Split(snssais, ",")
+
 		var snssaisBsonArray bson.A
-
-		var tempSnssai string
-		for i, v := range snssaisSplit {
-			if i%2 == 0 {
-				tempSnssai = v
-			} else {
-				tempSnssai += ","
-				tempSnssai += v
-
-				snssaiStruct := &models.Snssai{}
-				err := json.Unmarshal([]byte(tempSnssai), snssaiStruct)
-				if err != nil {
-					logger.DiscLog.Warnln("Unmarshal Error in snssaiStruct: ", err)
-				}
-
-				snssaiByteArray, err := bson.Marshal(snssaiStruct)
-				if err != nil {
-					logger.DiscLog.Warnln("Unmarshal Error in snssaiByteArray: ", err)
-				}
-
-				snssaiBsonM := bson.M{}
-				err = bson.Unmarshal(snssaiByteArray, &snssaiBsonM)
-				if err != nil {
-					logger.DiscLog.Warnln("Unmarshal Error in snssaiBsonM: ", err)
-				}
-
-				snssaisBsonArray = append(snssaisBsonArray, snssaiBsonM)
-			}
+		slices := util.SnssaisToBsonM(snssais)
+		for _, slice := range slices {
+			snssaisBsonArray = append(snssaisBsonArray, bson.M{"sNssais": bson.M{"$elemMatch": slice}})
 		}
 
 		snssaisFilter := bson.M{
@@ -1735,7 +1687,8 @@ func complexQueryFilterSubprocess(queryParameters map[string]*AtomElem, complexQ
 	if queryParameters["supi"] != nil {
 		var supiFilter bson.M
 		supi = queryParameters["supi"].value
-		if targetNfType == "PCF" {
+		switch targetNfType {
+		case "PCF":
 			supiFilter = bson.M{
 				"pcfInfo": bson.M{
 					"$elemMatch": bson.M{
@@ -1752,7 +1705,7 @@ func complexQueryFilterSubprocess(queryParameters map[string]*AtomElem, complexQ
 					},
 				},
 			}
-		} else if targetNfType == "CHF" {
+		case "CHF":
 			supiFilter = bson.M{
 				"chfInfo": bson.M{
 					"$elemMatch": bson.M{
@@ -1769,7 +1722,7 @@ func complexQueryFilterSubprocess(queryParameters map[string]*AtomElem, complexQ
 					},
 				},
 			}
-		} else if targetNfType == "AUSF" {
+		case "AUSF":
 			supiFilter = bson.M{
 				"ausfInfo": bson.M{
 					"$elemMatch": bson.M{
@@ -1786,7 +1739,7 @@ func complexQueryFilterSubprocess(queryParameters map[string]*AtomElem, complexQ
 					},
 				},
 			}
-		} else if targetNfType == "UDM" {
+		case "UDM":
 			supiFilter = bson.M{
 				"udmInfo": bson.M{
 					"$elemMatch": bson.M{
@@ -1803,7 +1756,7 @@ func complexQueryFilterSubprocess(queryParameters map[string]*AtomElem, complexQ
 					},
 				},
 			}
-		} else if targetNfType == "UDR" {
+		case "UDR":
 			supiFilter = bson.M{
 				"udrInfo": bson.M{
 					"$elemMatch": bson.M{
@@ -1834,7 +1787,7 @@ func complexQueryFilterSubprocess(queryParameters map[string]*AtomElem, complexQ
 		var ueIpv4AddressFilter bson.M
 		if targetNfType == "BSF" {
 			ueIpv4Address := queryParameters["ue-ipv4-address"].value
-			ueIpv4AddressNumber := context.Ipv4ToInt(ueIpv4Address)
+			ueIpv4AddressNumber := nrf_context.Ipv4ToInt(ueIpv4Address)
 			ueIpv4AddressFilter = bson.M{
 				"bsfInfo": bson.M{
 					"$elemMatch": bson.M{
@@ -1886,7 +1839,7 @@ func complexQueryFilterSubprocess(queryParameters map[string]*AtomElem, complexQ
 		var ueIpv6PrefixFilter bson.M
 		if targetNfType == "BSF" {
 			ueIpv6Prefix := queryParameters["ue-ipv6-prefix"].value
-			ueIpv6PrefixNumber := context.Ipv6ToInt(ueIpv6Prefix)
+			ueIpv6PrefixNumber := nrf_context.Ipv6ToInt(ueIpv6Prefix)
 			ueIpv6PrefixFilter = bson.M{
 				"bsfInfo": bson.M{
 					"$elemMatch": bson.M{

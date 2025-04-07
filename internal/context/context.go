@@ -7,25 +7,38 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/free5gc/nrf/internal/logger"
 	"github.com/free5gc/nrf/pkg/factory"
-	"github.com/nycu-ucr/openapi"
-	"github.com/nycu-ucr/openapi/models"
+	"github.com/free5gc/openapi/models"
+	"github.com/free5gc/openapi/oauth"
 )
 
 type NRFContext struct {
-	NrfNfProfile     models.NfProfile
+	NrfNfProfile     models.NrfNfManagementNfProfile
 	Nrf_NfInstanceID string
 	RootPrivKey      *rsa.PrivateKey
 	RootCert         *x509.Certificate
 	NrfPrivKey       *rsa.PrivateKey
 	NrfPubKey        *rsa.PublicKey
 	NrfCert          *x509.Certificate
+	NfRegistNum      int
+	nfRegistNumLock  sync.RWMutex
 }
+
+const (
+	NfProfileCollName string = "NfProfile"
+)
+
+type NFContext interface {
+	AuthorizationCheck(token string, serviceName models.ServiceName) error
+}
+
+var _ NFContext = &NRFContext{}
 
 var nrfContext NRFContext
 
@@ -36,46 +49,47 @@ func InitNrfContext() error {
 	configuration := config.Configuration
 
 	nrfContext.NrfNfProfile.NfInstanceId = uuid.New().String()
-	nrfContext.NrfNfProfile.NfType = models.NfType_NRF
-	nrfContext.NrfNfProfile.NfStatus = models.NfStatus_REGISTERED
+	nrfContext.NrfNfProfile.NfType = models.NrfNfManagementNfType_NRF
+	nrfContext.NrfNfProfile.NfStatus = models.NrfNfManagementNfStatus_REGISTERED
+	nrfContext.NfRegistNum = 0
 
 	serviceNameList := configuration.ServiceNameList
 
 	if config.GetOAuth() {
 		var err error
 		rootPrivKeyPath := config.GetRootPrivKeyPath()
-		nrfContext.RootPrivKey, err = openapi.ParsePrivateKeyFromPEM(rootPrivKeyPath)
+		nrfContext.RootPrivKey, err = oauth.ParsePrivateKeyFromPEM(rootPrivKeyPath)
 		if err != nil {
 			logger.InitLog.Warnf("No root private key: %v; generate new one", err)
 			err = makeDir(rootPrivKeyPath)
 			if err != nil {
 				return errors.Wrapf(err, "NRF init")
 			}
-			nrfContext.RootPrivKey, err = openapi.GenerateRSAKeyPair("", rootPrivKeyPath)
+			nrfContext.RootPrivKey, err = oauth.GenerateRSAKeyPair("", rootPrivKeyPath)
 			if err != nil {
 				return errors.Wrapf(err, "NRF init")
 			}
 		}
 
 		rootCertPath := config.GetRootCertPemPath()
-		nrfContext.RootCert, err = openapi.ParseCertFromPEM(rootCertPath)
+		nrfContext.RootCert, err = oauth.ParseCertFromPEM(rootCertPath)
 		if err != nil {
 			logger.InitLog.Warnf("No root cert: %v; generate new one", err)
 			err = makeDir(rootCertPath)
 			if err != nil {
 				return errors.Wrapf(err, "NRF init")
 			}
-			nrfContext.RootCert, err = openapi.GenerateRootCertificate(rootCertPath, nrfContext.RootPrivKey)
+			nrfContext.RootCert, err = oauth.GenerateRootCertificate(rootCertPath, nrfContext.RootPrivKey)
 			if err != nil {
 				return errors.Wrapf(err, "NRF init")
 			}
 		}
 
 		nrfPrivKeyPath := config.GetNrfPrivKeyPath()
-		nrfContext.NrfPrivKey, err = openapi.ParsePrivateKeyFromPEM(nrfPrivKeyPath)
+		nrfContext.NrfPrivKey, err = oauth.ParsePrivateKeyFromPEM(nrfPrivKeyPath)
 		if err != nil {
 			logger.InitLog.Warnf("No NF priv key: %v; generate new one", err)
-			nrfContext.NrfPrivKey, err = openapi.GenerateRSAKeyPair("", nrfPrivKeyPath)
+			nrfContext.NrfPrivKey, err = oauth.GenerateRSAKeyPair("", nrfPrivKeyPath)
 			if err != nil {
 				return errors.Wrapf(err, "NRF init")
 			}
@@ -84,7 +98,7 @@ func InitNrfContext() error {
 
 		nrfCertPath := config.GetNrfCertPemPath()
 		logger.InitLog.Infof("generate new NRF cert")
-		nrfContext.NrfCert, err = openapi.GenerateCertificate(
+		nrfContext.NrfCert, err = oauth.GenerateCertificate(
 			string(nrfContext.NrfNfProfile.NfType), nrfContext.Nrf_NfInstanceID,
 			nrfCertPath, nrfContext.NrfPubKey, nrfContext.RootCert, nrfContext.RootPrivKey)
 		if err != nil {
@@ -93,20 +107,20 @@ func InitNrfContext() error {
 	}
 
 	NFServices := InitNFService(serviceNameList, config.Info.Version)
-	nrfContext.NrfNfProfile.NfServices = &NFServices
+	nrfContext.NrfNfProfile.NfServices = NFServices
 	return nil
 }
 
-func InitNFService(srvNameList []string, version string) []models.NfService {
+func InitNFService(srvNameList []string, version string) []models.NrfNfManagementNfService {
 	tmpVersion := strings.Split(version, ".")
 	versionUri := "v" + tmpVersion[0]
-	NFServices := make([]models.NfService, len(srvNameList))
+	NFServices := make([]models.NrfNfManagementNfService, len(srvNameList))
 	for index, nameString := range srvNameList {
 		name := models.ServiceName(nameString)
-		NFServices[index] = models.NfService{
+		NFServices[index] = models.NrfNfManagementNfService{
 			ServiceInstanceId: strconv.Itoa(index),
 			ServiceName:       name,
-			Versions: &[]models.NfServiceVersion{
+			Versions: []models.NfServiceVersion{
 				{
 					ApiFullVersion:  version,
 					ApiVersionInUri: versionUri,
@@ -115,10 +129,10 @@ func InitNFService(srvNameList []string, version string) []models.NfService {
 			Scheme:          models.UriScheme(factory.NrfConfig.GetSbiScheme()),
 			NfServiceStatus: models.NfServiceStatus_REGISTERED,
 			ApiPrefix:       factory.NrfConfig.GetSbiUri(),
-			IpEndPoints: &[]models.IpEndPoint{
+			IpEndPoints: []models.IpEndPoint{
 				{
 					Ipv4Address: factory.NrfConfig.GetSbiRegisterIP(),
-					Transport:   models.TransportProtocol_TCP,
+					Transport:   models.NrfNfManagementTransportProtocol_TCP,
 					Port:        int32(factory.NrfConfig.GetSbiPort()),
 				},
 			},
@@ -136,23 +150,35 @@ func makeDir(filePath string) error {
 }
 
 func SignNFCert(nfType, nfId string) error {
-	nfCertPath := openapi.GetNFCertPath(factory.NrfConfig.GetCertBasePath(), nfType)
+	// Use default {Nf_type}.pem
+	nfCertPath := oauth.GetNFCertPath(factory.NrfConfig.GetCertBasePath(), nfType, "")
+	newCertPath := oauth.GetNFCertPath(factory.NrfConfig.GetCertBasePath(), nfType, nfId)
+
+	logger.NfmLog.Infoln("Use NF certPath:", nfCertPath)
 
 	// Get NF's Certificate from file
-	nfCert, err := openapi.ParseCertFromPEM(nfCertPath)
+	nfCert, err := oauth.ParseCertFromPEM(nfCertPath)
 	if err != nil {
 		logger.NfmLog.Warnf("No NF cert: %v; generate new one", err)
 
 		// Get NF's Public key from file
 		var nfPubKey *rsa.PublicKey
-		nfPubKey, err = openapi.ParsePublicKeyFromPEM(nfCertPath)
+		nfPubKey, err = oauth.ParsePublicKeyFromPEM(nfCertPath)
 		if err != nil {
-			return errors.Wrapf(err, "sign NF cert")
+			// When ParsePublicKayFromPEM failed, generate new RSA key pair
+			_, err = oauth.GenerateRSAKeyPair(nfCertPath, "")
+			if err != nil {
+				return errors.Wrapf(err, "Generate Error")
+			}
+			nfPubKey, err = oauth.ParsePublicKeyFromPEM(nfCertPath)
+			if err != nil {
+				return errors.Wrapf(err, "Generated but can't parse public key")
+			}
 		}
 
-		// Generate new NF's Certificate to file
-		_, err = openapi.GenerateCertificate(
-			nfType, nfId, nfCertPath, nfPubKey, nrfContext.RootCert, nrfContext.RootPrivKey)
+		// Generate new NF's Certificate to new file
+		_, err = oauth.GenerateCertificate(
+			nfType, nfId, newCertPath, nfPubKey, nrfContext.RootCert, nrfContext.RootPrivKey)
 		if err != nil {
 			return errors.Wrapf(err, "sign NF cert")
 		}
@@ -162,9 +188,9 @@ func SignNFCert(nfType, nfId string) error {
 			return errors.Errorf("No public key in NF cert")
 		}
 
-		// Re-generate new NF's Certificate to file
-		_, err = openapi.GenerateCertificate(
-			nfType, nfId, nfCertPath, nfPubkey, nrfContext.RootCert, nrfContext.RootPrivKey)
+		// Re-generate new NF's Certificate to new file
+		_, err = oauth.GenerateCertificate(
+			nfType, nfId, newCertPath, nfPubkey, nrfContext.RootCert, nrfContext.RootPrivKey)
 		if err != nil {
 			return errors.Wrapf(err, "sign NF cert")
 		}
@@ -175,4 +201,28 @@ func SignNFCert(nfType, nfId string) error {
 
 func GetSelf() *NRFContext {
 	return &nrfContext
+}
+
+func (context *NRFContext) AuthorizationCheck(token string, serviceName models.ServiceName) error {
+	if !factory.NrfConfig.GetOAuth() {
+		return nil
+	}
+	err := oauth.VerifyOAuth(token, string(serviceName), factory.NrfConfig.GetNrfCertPemPath())
+	if err != nil {
+		logger.AccTokenLog.Warningln("AuthorizationCheck:", err)
+		return err
+	}
+	return nil
+}
+
+func (ctx *NRFContext) AddNfRegister() {
+	ctx.nfRegistNumLock.Lock()
+	defer ctx.nfRegistNumLock.Unlock()
+	ctx.NfRegistNum += 1
+}
+
+func (ctx *NRFContext) DelNfRegister() {
+	ctx.nfRegistNumLock.Lock()
+	defer ctx.nfRegistNumLock.Unlock()
+	ctx.NfRegistNum -= 1
 }

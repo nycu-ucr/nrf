@@ -1,16 +1,19 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/urfave/cli"
 
 	"github.com/free5gc/nrf/internal/logger"
 	"github.com/free5gc/nrf/pkg/factory"
 	"github.com/free5gc/nrf/pkg/service"
-	logger_util "github.com/nycu-ucr/util/logger"
-	"github.com/nycu-ucr/util/version"
+	logger_util "github.com/free5gc/util/logger"
+	"github.com/free5gc/util/version"
 )
 
 var NRF *service.NrfApp
@@ -40,8 +43,16 @@ func action(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
 	logger.MainLog.Infoln("NRF version: ", version.GetVersion())
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh  // Wait for interrupt signal to gracefully shutdown
+		cancel() // Notify each goroutine and wait them stopped
+	}()
 
 	cfg, err := factory.ReadConfig(cliCtx.String("config"))
 	if err != nil {
@@ -49,14 +60,13 @@ func action(cliCtx *cli.Context) error {
 	}
 	factory.NrfConfig = cfg
 
-	nrf, err := service.NewApp(cfg)
+	nrf, err := service.NewApp(ctx, cfg, tlsKeyLogPath)
 	if err != nil {
 		return err
 	}
 	NRF = nrf
 
-	nrf.Start(tlsKeyLogPath)
-
+	nrf.Start()
 	return nil
 }
 
@@ -81,6 +91,5 @@ func initLogFile(logNfPath []string) (string, error) {
 		_, name := filepath.Split(factory.NrfDefaultTLSKeyLogPath)
 		logTlsKeyPath = filepath.Join(tmpDir, name)
 	}
-
 	return logTlsKeyPath, nil
 }

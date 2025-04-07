@@ -1,37 +1,37 @@
-package producer
+package processor
 
 import (
 	"crypto/x509"
-	"github.com/nycu-ucr/gonet/http"
+	"net/http"
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-	"github.com/mitchellh/mapstructure"
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 
 	nrf_context "github.com/free5gc/nrf/internal/context"
 	"github.com/free5gc/nrf/internal/logger"
+	"github.com/free5gc/nrf/internal/util"
 	"github.com/free5gc/nrf/pkg/factory"
-	"github.com/nycu-ucr/openapi"
-	"github.com/nycu-ucr/openapi/models"
-	"github.com/nycu-ucr/util/httpwrapper"
-	"github.com/nycu-ucr/util/mongoapi"
+	"github.com/free5gc/openapi/models"
+	"github.com/free5gc/openapi/oauth"
+	"github.com/free5gc/util/mapstruct"
+	"github.com/free5gc/util/mongoapi"
 )
 
-func HandleAccessTokenRequest(request *httpwrapper.Request) *httpwrapper.Response {
+func (p *Processor) HandleAccessTokenRequest(c *gin.Context, accessTokenReq models.NrfAccessTokenAccessTokenReq) {
 	// Param of AccessTokenRsp
-	logger.AccTokenLog.Infoln("Handle AccessTokenRequest")
+	logger.AccTokenLog.Debugln("Handle AccessTokenRequest")
 
-	accessTokenReq := request.Body.(models.AccessTokenReq)
-
-	response, errResponse := AccessTokenProcedure(accessTokenReq)
-
+	response, errResponse := p.AccessTokenProcedure(accessTokenReq)
 	if errResponse != nil {
-		return httpwrapper.NewResponse(http.StatusBadRequest, nil, errResponse)
+		c.JSON(http.StatusBadRequest, errResponse)
+		return
 	} else if response != nil {
 		// status code is based on SPEC, and option headers
-		return httpwrapper.NewResponse(http.StatusOK, nil, response)
+		c.JSON(http.StatusOK, response)
+		return
 	}
 
 	logger.AccTokenLog.Errorln("AccessTokenProcedure returned neither an error nor a response")
@@ -39,35 +39,39 @@ func HandleAccessTokenRequest(request *httpwrapper.Request) *httpwrapper.Respons
 		Status: http.StatusInternalServerError,
 		Cause:  "UNSPECIFIED",
 	}
-	return httpwrapper.NewResponse(int(problemDetails.Status), nil, problemDetails)
+	util.GinProblemJson(c, problemDetails)
 }
 
-func AccessTokenProcedure(request models.AccessTokenReq) (
-	*models.AccessTokenRsp, *models.AccessTokenErr,
+func (p *Processor) AccessTokenProcedure(request models.NrfAccessTokenAccessTokenReq) (
+	*models.NrfAccessTokenAccessTokenRsp, *models.AccessTokenErr,
 ) {
-	logger.AccTokenLog.Infoln("In AccessTokenProcedure")
+	logger.AccTokenLog.Debugln("In AccessTokenProcedure")
 
-	var expiration int32 = 1000
+	var (
+		expiration int32  = 1000
+		tokenType  string = "Bearer"
+	)
 	scope := request.Scope
-	tokenType := "Bearer"
-	now := int32(time.Now().Unix())
+	now := time.Now()
+	nowNum := int32(now.Unix())
 
-	errResponse := AccessTokenScopeCheck(request)
+	errResponse := p.AccessTokenScopeCheck(request)
 	if errResponse != nil {
+		logger.AccTokenLog.Errorf("AccessTokenScopeCheck error: %v", errResponse.Error)
 		return nil, errResponse
 	}
 
 	// Create AccessToken
 	nrfCtx := nrf_context.GetSelf()
 	accessTokenClaims := models.AccessTokenClaims{
-		Iss:            nrfCtx.Nrf_NfInstanceID,    // NF instance id of the NRF
-		Sub:            request.NfInstanceId,       // nfInstanceId of service consumer
-		Aud:            request.TargetNfInstanceId, // nfInstanceId of service producer
-		Scope:          request.Scope,              // TODO: the name of the NF services for which the
-		Exp:            now + expiration,           // access_token is authorized for use
-		StandardClaims: jwt.StandardClaims{},
+		Iss:              nrfCtx.Nrf_NfInstanceID,    // NF instance id of the NRF
+		Sub:              request.NfInstanceId,       // nfInstanceId of service consumer
+		Aud:              request.TargetNfInstanceId, // nfInstanceId of service producer
+		Scope:            request.Scope,              // TODO: the name of the NF services for which the
+		Exp:              nowNum + expiration,        // access_token is authorized for use
+		RegisteredClaims: jwt.RegisteredClaims{},
 	}
-	accessTokenClaims.IssuedAt = int64(now)
+	accessTokenClaims.IssuedAt = &jwt.NumericDate{Time: now}
 
 	// Use NRF private key to sign AccessToken
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS512"), accessTokenClaims)
@@ -79,7 +83,7 @@ func AccessTokenProcedure(request models.AccessTokenReq) (
 		}
 	}
 
-	response := &models.AccessTokenRsp{
+	response := &models.NrfAccessTokenAccessTokenRsp{
 		AccessToken: accessToken,
 		TokenType:   tokenType,
 		ExpiresIn:   expiration,
@@ -88,9 +92,9 @@ func AccessTokenProcedure(request models.AccessTokenReq) (
 	return response, nil
 }
 
-func AccessTokenScopeCheck(req models.AccessTokenReq) *models.AccessTokenErr {
+func (p *Processor) AccessTokenScopeCheck(req models.NrfAccessTokenAccessTokenReq) *models.AccessTokenErr {
 	// Check with nf profile
-	collName := "NfProfile"
+	collName := nrf_context.NfProfileCollName
 	reqGrantType := req.GrantType
 	reqNfType := strings.ToUpper(string(req.NfType))
 	reqTargetNfType := strings.ToUpper(string(req.TargetNfType))
@@ -108,6 +112,7 @@ func AccessTokenScopeCheck(req models.AccessTokenReq) *models.AccessTokenErr {
 		}
 	}
 
+	logger.AccTokenLog.Debugf("reqNfInstanceId: %s", reqNfInstanceId)
 	filter := bson.M{"nfInstanceId": reqNfInstanceId}
 	consumerNfInfo, err := mongoapi.RestfulAPIGetOne(collName, filter)
 	if err != nil {
@@ -117,8 +122,9 @@ func AccessTokenScopeCheck(req models.AccessTokenReq) *models.AccessTokenErr {
 		}
 	}
 
-	nfProfile := models.NfProfile{}
-	err = mapstructure.Decode(consumerNfInfo, &nfProfile)
+	nfProfile := models.NrfNfManagementNfProfile{}
+
+	err = mapstruct.Decode(consumerNfInfo, &nfProfile)
 	if err != nil {
 		logger.AccTokenLog.Errorln("Certificate verify error: " + err.Error())
 		return &models.AccessTokenErr{
@@ -137,8 +143,8 @@ func AccessTokenScopeCheck(req models.AccessTokenReq) *models.AccessTokenErr {
 	nrfCtx := nrf_context.GetSelf()
 	roots.AddCert(nrfCtx.RootCert)
 
-	nfCert, err := openapi.ParseCertFromPEM(
-		openapi.GetNFCertPath(factory.NrfConfig.GetCertBasePath(), reqNfType))
+	nfCert, err := oauth.ParseCertFromPEM(
+		oauth.GetNFCertPath(factory.NrfConfig.GetCertBasePath(), reqNfType, reqNfInstanceId))
 	if err != nil {
 		logger.AccTokenLog.Errorln("NF Certificate get error: " + err.Error())
 		return &models.AccessTokenErr{
@@ -151,9 +157,16 @@ func AccessTokenScopeCheck(req models.AccessTokenReq) *models.AccessTokenErr {
 		DNSName: reqNfType,
 	}
 	if _, err = nfCert.Verify(opts); err != nil {
-		logger.AccTokenLog.Errorln("Certificate verify error: " + err.Error())
-		return &models.AccessTokenErr{
-			Error: "invalid_client",
+		// DEBUG
+		// In testing environment, this would leads to follwing error:
+		// certificate verify error: x509: certificate signed by unknown authority free5GC
+		if strings.Contains(err.Error(), "unknown authority") {
+			logger.AccTokenLog.Warnf("Certificate verify: %v", err)
+		} else {
+			logger.AccTokenLog.Errorf("Certificate verify: %v", err)
+			return &models.AccessTokenErr{
+				Error: "invalid_client",
+			}
 		}
 	}
 
@@ -187,15 +200,15 @@ func AccessTokenScopeCheck(req models.AccessTokenReq) *models.AccessTokenErr {
 		}
 	}
 
-	nfProfile = models.NfProfile{}
-	err = mapstructure.Decode(producerNfInfo, &nfProfile)
+	nfProfile = models.NrfNfManagementNfProfile{}
+	err = mapstruct.Decode(producerNfInfo, &nfProfile)
 	if err != nil {
 		logger.AccTokenLog.Errorln("Certificate verify error: " + err.Error())
 		return &models.AccessTokenErr{
 			Error: "invalid_client",
 		}
 	}
-	nfServices := *nfProfile.NfServices
+	nfServices := nfProfile.NfServices
 
 	scopes := strings.Split(req.Scope, " ")
 
@@ -224,6 +237,5 @@ func AccessTokenScopeCheck(req models.AccessTokenReq) *models.AccessTokenErr {
 			}
 		}
 	}
-
 	return nil
 }

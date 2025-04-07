@@ -5,10 +5,10 @@
 package context
 
 import (
-	"github.com/nycu-ucr/openapi/models"
+	"github.com/free5gc/openapi/models"
 )
 
 type UriList struct {
-	NfType models.NfType `json:"nfType,omitempty" bson:"nfType,omitempty"`
-	Link   Links         `json:"_link" bson:"_link" mapstructure:"_link"`
+	NfType models.NrfNfManagementNfType `json:"nfType,omitempty" bson:"nfType,omitempty"`
+	Link   Links                        `json:"_link" bson:"_link" mapstructure:"_link"`
 }
