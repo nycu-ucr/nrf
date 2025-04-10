@@ -3,9 +3,9 @@ module github.com/nycu-ucr/nrf
 go 1.21
 
 require (
-	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/golang-jwt/jwt/v5 v5.2.1
-	github.com/google/uuid v1.6.0
+	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
+	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nycu-ucr/gin v0.0.0-20230307121200-573befe2dfbe
 	github.com/nycu-ucr/gonet v0.0.0-20231031091538-7b378fb19c77
@@ -14,7 +14,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
-	github.com/urfave/cli v1.22.16
+	github.com/urfave/cli v1.22.5
 	go.mongodb.org/mongo-driver v1.8.4
 	gopkg.in/yaml.v2 v2.4.0
 )
