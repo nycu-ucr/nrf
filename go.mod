@@ -9,7 +9,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nycu-ucr/gin v0.0.0-20230307121200-573befe2dfbe
 	github.com/nycu-ucr/gonet v0.0.0-20231031091538-7b378fb19c77
-	github.com/nycu-ucr/openapi v0.0.0-20250401050632-3742ea1a1979
+	github.com/nycu-ucr/openapi v0.0.0-20250417011856-fb371150b467
 	github.com/nycu-ucr/util v0.0.0-20230928120650-6ed674c090b3
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
