@@ -67,5 +67,9 @@ require (
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/nycu-ucr/onvmpoller => ../xio
+replace github.com/nycu-ucr/openapi => ../../third_party/openapi
+replace github.com/nycu-ucr/util => ../../third_party/util-20230928
